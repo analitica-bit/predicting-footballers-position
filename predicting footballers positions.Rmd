@@ -1,0 +1,137 @@
+---
+title: "predicting footballers postion using machine learning"
+author: "Efoli Matthew"
+date: "29/04/2021"
+output: html_document
+---
+
+## Predicting FIFA football players positions using MACHINE LEARNING.
+it is a supervised learning project.
+
+###  Data description
+The column headers depicts the variable names. The str() function gives the description of the first set of observations in each column. From the str() output we find out the class of the data set.
+We decided to change some of the variables to factor 'class' from character. this can be done using the as.factor(). Two factors we consider are foot and position.
+
+```{r load_data}
+fifa <- read.csv("fifa.csv", header = TRUE)
+fifa
+str(fifa)
+head(fifa, 6)
+fifa$position <- as.factor(fifa$position)
+fifa$foot <- as.factor(fifa$foot)
+str(fifa) #running this code the second time you will notice the change in the selected variables to be converted to factors
+percentage <- prop.table(table(fifa$position)) * 100
+cbind(freq=table(fifa$position), percentage=percentage)
+percentage <- prop.table(table(fifa$foot)) * 100
+cbind(freq=table(fifa$foot), percentage=percentage)
+```
+The read.csv() function makes it possible to read the fifa csv file. The header = TRUE is an argument to indicate the first row is a header/ column names.
+the head() function gives the first 5 rows of the data. adding the 6 to the function increases the number of visible rows to 6.
+try changing it to see what it gives. try 10 using the code below.
+`head(fifa, 10)`
+
+
+#### split the data 
+Data needs to be split by position as blank observations for several variables exists in the goalkeeper football players position e.g. pace, shooting, passing, dribbling, defending etc.
+This process will be carried out using the filter() function in the tidyverse package. Although, one could load the dplyr package to save memory as tidyverse contains several packages such as ggplot2, dplyr. to know more about tidyverse - run this code.
+`?tidyverse`
+to load the dplyr package, use the code below. 
+`library(dplyr)`
+
+Note: only installed packages can be loaded as it becomes part of the R library on your computer. 
+`install.packages("dplyr")`
+
+Next steps after successfully removing the goal keepers (GK) position rows, the next thing is to remove the columns not associated with players other than goalies.
+The following variables  will be removed; diving, handling, kicking, reflexes, speed and positioning. There are several ways of doing this. But, i will be using the one that comes to mind first. it is generally a subsetting challenge. `str()` and `dim()` functions may come in handy as `str()` shows the structure and `dim()` shows the dimension of the dataset in terms of number of rows * number of columns.
+It is advisable to take of the id and name columns as it will not be needed also  in our subsequent prediction exercise.
+
+```{r filter_data}
+library(dplyr)
+fifa2 <- filter(fifa, position != " GK")
+str(fifa2)
+dim(fifa2)
+fifa3 <- fifa2[, c(3:6, 8:13)]
+str(fifa3)
+?droplevels
+fifa3$position <- droplevels(fifa3)$position
+```
+
+
+### DATA Exploration through visualization of the fifa dataset
+
+#### Count of football players by position
+
+```{r}
+library(ggplot2)
+ggplot(fifa3, aes(x = position)) +
+  geom_bar(width=0.5, fill = "gold") +
+  geom_text(stat='count', aes(label=stat(count)), vjust=-0.5) +
+  theme_classic()
+
+
+```
+
+### The Modelling process
+
+#### split the data into train and test
+use set.seed() to get the same partitions when re-running the R code.
+partitioning into training (60%) and validation (40%)
+randomly sample 60% of the rows for training; the remaining 40% serve as validation
+collect all the columns with training row ID into training set: `fifa3[trains.rows, ]`
+assign row IDs that are not already in the training set, into validation
+
+
+
+```{r splittingdata}
+set.seed(1)
+train.rows <- sample(rownames(fifa3), dim(fifa3)[1]*0.6)
+train.data <- fifa3[train.rows, ]
+valid.rows <- setdiff(rownames(fifa3), train.rows)
+valid.data <- fifa3[valid.rows, ]
+```
+Personally, i think increasing the training data set can in a way help one to get a more accurate decision.
+#### Decision tree model
+```{r decision}
+library(rpart)
+library(rpart.plot)
+?rpart
+fit <- rpart(position~., data = train.data, method = "class")
+?rpart.plot
+rpart.plot(fit, extra = 104)
+```
+extra = 104 as response has more than two variables.
+method = 'class' because the y variable is a factor variable.
+
+#### pedicting accuracy
+
+To predict the accuracy 
+```{r predict}
+?predict
+predicted = predict(fit, valid.data, type = 'class')
+predicted
+dim(predicted)
+dim(train.data)
+dim(valid.data)
+?table
+valid.data$position
+table = table(valid.data$position, predicted) # to get this table i have to write a code that selects the possible position based on high probability. Adding the type = 'class' argument to the predict() fuction makes it possible to do that.
+
+table
+dt_accuracy = sum(diag(table)) / sum(table)
+paste("The accuracy is : ", dt_accuracy)
+
+```
+
+```{r}
+library(e1071)
+nb_model = naiveBayes(position ~., data=train.data)
+nb_predict = predict(nb_model,valid.data)
+table_mat = table(nb_predict, valid.data$position)
+nb_accuracy = sum(diag(table_mat)) / sum(table_mat)
+paste("The accuracy is : ", nb_accuracy)
+```
+
+```{r}
+
+```
+
