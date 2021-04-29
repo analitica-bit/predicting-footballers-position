@@ -61,7 +61,7 @@ fifa3$position <- droplevels(fifa3)$position
 
 #### Count of football players by position
 
-```{r}
+```{r eda}
 library(ggplot2)
 ggplot(fifa3, aes(x = position)) +
   geom_bar(width=0.5, fill = "gold") +
@@ -122,7 +122,7 @@ paste("The accuracy is : ", dt_accuracy)
 
 ```
 
-```{r}
+```{r naivebayes}
 library(e1071)
 nb_model = naiveBayes(position ~., data=train.data)
 nb_predict = predict(nb_model,valid.data)
@@ -131,7 +131,48 @@ nb_accuracy = sum(diag(table_mat)) / sum(table_mat)
 paste("The accuracy is : ", nb_accuracy)
 ```
 
-```{r}
+```{r knn}
+library(class)
+library(dummies)
+# one hot encoding using dummy
+ohcdata = cbind(fifa3, dummy(fifa3$foot))
+View(ohcdata)
+# drop original factor variables
+ohcdata$foot = NULL
+set.seed(1)
 
+ohctrain.rows <- sample(rownames(ohcdata), dim(ohcdata)[1]*0.5)
+ohctrain.data <- ohcdata[ohctrain.rows, ]
+ohcvalid.rows <- setdiff(rownames(ohcdata), dim(ohcdata)[1]*0.5)
+ohcvalid.data <- ohcdata[ohcvalid.rows, ]
+?select
+ohctrain_labels = select(ohctrain.data, position)[,1]
+ohctrain_labels
+ohcvalid_labels = select(ohcvalid.data, position)[,1]
+# drop labels for prediction
+ohctrain.data$position=NULL
+ohcvalid.data$position=NULL
+?knn
+knn_predict = knn(train = ohctrain.data,
+                  test = ohcvalid.data,
+                  cl = ohctrain_labels,
+                  k=3)
+table_mat = table(knn_predict, test_labels)
+accuracy_knn = sum(diag(table_mat)) / sum(table_mat)
+```
+
+```{r logreg}
+fifa3_rescale = mutate_if(fifa3,
+                          is.numeric,
+                          list(~as.numeric(scale(.))))
+r_train = train_test_split(data_rescale, 0.7, train = TRUE)
+r_test = train_test_split(data_rescale, 0.7, train = FALSE)
+logit = glm(Survived~., data = r_train, family = "binomial")
+summary(logit)
+lr_predict = predict(logit, r_test, type = "response")
+# confusion matrix
+table_mat = table(r_test$Survived, lr_predict > 0.68)
+lr_accuracy = sum(diag(table_mat)) / sum(table_mat)
+paste("The accuracy is : ", lr_accuracy)
 ```
 
