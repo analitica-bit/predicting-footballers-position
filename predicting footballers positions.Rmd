@@ -165,6 +165,15 @@ accuracy_knn = sum(diag(table_mat)) / sum(table_mat)
 fifa3_rescale = mutate_if(fifa3,
                           is.numeric,
                           list(~as.numeric(scale(.))))
+log_train <- 
+
+log_valid <-
+  
+logit <- glm()
+
+summary(logit)
+lr_predict <- predict(logit, log_valid, family)
+
 r_train = train_test_split(data_rescale, 0.7, train = TRUE)
 r_test = train_test_split(data_rescale, 0.7, train = FALSE)
 logit = glm(Survived~., data = r_train, family = "binomial")
